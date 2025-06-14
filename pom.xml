@@ -11,7 +11,7 @@
 	<groupId>com.growtivat</groupId>
 	<artifactId>auth-service</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
-	<name>user-service</name>
+	<name>auth-service</name>
 	<description>Creates a JWT for authentication</description>
 	<url/>
 	<licenses>
