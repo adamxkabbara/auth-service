@@ -1,14 +1,14 @@
 package com.growtivat.auth_service.security.filters;
 
 import com.growtivat.auth_service.utils.JwtUtils;
-import io.jsonwebtoken.ExpiredJwtException;
+import com.growtivat.auth_service.utils.TokenType;
+
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.NonNull;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -20,7 +20,6 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import org.springframework.web.servlet.HandlerExceptionResolver;
 
 import java.io.IOException;
-import java.security.SignatureException;
 
 @Component
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
@@ -32,46 +31,54 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private final JwtUtils jwtUtils;
 
     @Autowired
-    public JwtAuthenticationFilter(HandlerExceptionResolver handlerExceptionResolver, UserDetailsService userDetailsService, JwtUtils jwtUtils) {
+    public JwtAuthenticationFilter(HandlerExceptionResolver handlerExceptionResolver,
+            UserDetailsService userDetailsService, JwtUtils jwtUtils) {
         this.handlerExceptionResolver = handlerExceptionResolver;
         this.userDetailsService = userDetailsService;
         this.jwtUtils = jwtUtils;
     }
 
     @Override
-    protected void doFilterInternal(@NonNull HttpServletRequest request, @NonNull HttpServletResponse response,@NonNull FilterChain filterChain) throws ServletException, IOException {
+    protected void doFilterInternal(@NonNull HttpServletRequest request, @NonNull HttpServletResponse response,
+            @NonNull FilterChain filterChain) throws ServletException, IOException {
+        final String path = request.getRequestURI();
+
+        // Skip JWT validation for public endpoints
+        if (path.startsWith("/api/auth/")) {
+            filterChain.doFilter(request, response);
+            return;
+        }
+
         final String authHeader = request.getHeader("Authorization");
 
-//        try {
+        try {
             if (authHeader == null || !authHeader.startsWith("Bearer")) {
                 filterChain.doFilter(request, response);
                 return;
             }
 
             String token = authHeader.substring(7);
-            String username = jwtUtils.extractUsername(token);
+            String username = jwtUtils.extractUsername(token, TokenType.ACCESS);
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
             if (username != null && authentication == null) {
                 UserDetails userDetails = userDetailsService.loadUserByUsername(username);
 
-                if (jwtUtils.isValidToken(token, userDetails)) {
-                    UsernamePasswordAuthenticationToken authenticationToken
-                            = new UsernamePasswordAuthenticationToken(
+                if (jwtUtils.isValidToken(token, userDetails, TokenType.ACCESS)) {
+                    UsernamePasswordAuthenticationToken authenticationToken = new UsernamePasswordAuthenticationToken(
                             userDetails,
                             null,
-                            userDetails.getAuthorities()
-                    );
+                            userDetails.getAuthorities());
 
                     authenticationToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
 
                     SecurityContextHolder.getContext().setAuthentication(authenticationToken);
-
-                    filterChain.doFilter(request, response);
                 }
             }
-//        } catch (Exception ex) {
-//            handlerExceptionResolver.resolveException(request, response, null, ex);
-//        }
+            filterChain.doFilter(request, response);
+
+        } catch (Exception ex) {
+            handlerExceptionResolver.resolveException(request, response, null, ex);
+        }
     }
 }
