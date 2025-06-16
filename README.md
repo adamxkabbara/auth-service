@@ -80,11 +80,32 @@ This service provides REST API endpoints for user registration and authenticatio
 -   **Response:**
     ```json
     {
-        "accessToken": "jwt_token_here",
+        "accessToken": "jwt_access_token_here",
+        "refreshToken": "jwt_refresh_token_here",
         "expiresIn": 900000
     }
     ```
+    
+#### Refresh Token
 
+-   **POST** `/api/auth/refresh`
+-   **Request Body:**
+    ```json
+    {
+        "refreshToken": "jwt_refresh_token_here"
+    }
+    ```
+-   **Response:**
+    ```json
+    {
+        "accessToken": "new_jwt_access_token_here",
+        "refreshToken": "jwt_refresh_token_here",
+        "expiresIn": 604800000
+    }
+    ```
+
+-   Use the `refreshToken` received from authentication to obtain a new access token when the old one expires. The same refresh token is returned in the response.
+    
 ### H2 Database Console
 
 -   Accessible at: `http://localhost:8080/h2-console`
