@@ -3,15 +3,12 @@ package com.growtivat.auth_service.service;
 import com.growtivat.auth_service.dto.AuthenticateUserRequestDto;
 import com.growtivat.auth_service.dto.NewUserRequestDto;
 import com.growtivat.auth_service.dto.AuthenticateUserResponseDto;
-import com.growtivat.auth_service.dto.RefreshTokenResponseDto;
 import com.growtivat.auth_service.model.RefreshToken;
 import com.growtivat.auth_service.model.User;
 import com.growtivat.auth_service.repository.UserRepository;
 import com.growtivat.auth_service.utils.JwtUtils;
 import com.growtivat.auth_service.utils.TokenType;
 
-import jakarta.servlet.http.Cookie;
-import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
@@ -103,7 +100,7 @@ public class AuthService {
                 .body(response);
     }
 
-    public ResponseEntity<RefreshTokenResponseDto> createNewAccessTokenFrom(String refreshToken) {
+    public ResponseEntity<AuthenticateUserResponseDto> createNewAccessTokenFrom(String refreshToken) {
         if (refreshToken == null || refreshToken.isEmpty()) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
@@ -118,7 +115,7 @@ public class AuthService {
         String username = jwtUtils.extractUsername(refreshTokenOpt.get().getToken(), TokenType.REFRESH);
         String newAccessToken = jwtUtils.generateToken(username, TokenType.ACCESS);
 
-        RefreshTokenResponseDto response = RefreshTokenResponseDto.builder()
+        AuthenticateUserResponseDto response = AuthenticateUserResponseDto.builder()
                 .accessToken(newAccessToken)
                 .expiresIn(accessTokenTTL)
                 .build();
