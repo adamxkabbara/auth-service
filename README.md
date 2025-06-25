@@ -81,31 +81,37 @@ This service provides REST API endpoints for user registration and authenticatio
     ```json
     {
         "accessToken": "jwt_access_token_here",
-        "refreshToken": "jwt_refresh_token_here",
-        "expiresIn": 900000
+        "expiresIn": 900
     }
     ```
-    
+-   **Notes:**
+    - The `refreshToken` is **not** included in the JSON response body.
+    - The `refreshToken` is sent as an `HttpOnly` cookie in the `Set-Cookie` response header.
+    - The client should store the `accessToken` from the response body and rely on the browser to manage the `refreshToken` cookie.
+
 #### Refresh Token
 
--   **POST** `/api/auth/refresh`
--   **Request Body:**
-    ```json
-    {
-        "refreshToken": "jwt_refresh_token_here"
-    }
-    ```
+-   **GET** `/api/auth/refresh`
+-   **Request:**
+    - The `refreshToken` must be present as an `HttpOnly` cookie (automatically sent by the browser).
 -   **Response:**
     ```json
     {
         "accessToken": "new_jwt_access_token_here",
-        "refreshToken": "jwt_refresh_token_here",
-        "expiresIn": 604800000
+        "expiresIn": 900
     }
     ```
+-   **Notes:**
+    - The endpoint reads the `refreshToken` from the cookie, not from the request body.
+    - A new access token is returned in the response body.
 
--   Use the `refreshToken` received from authentication to obtain a new access token when the old one expires. The same refresh token is returned in the response.
-    
+#### Logout
+
+-   **POST** `/api/auth/logout`
+-   **Request:**
+    - The `refreshToken` cookie is used to identify and invalidate the session.
+-   **Response:** `200 OK` on success
+
 ### H2 Database Console
 
 -   Accessible at: `http://localhost:8080/h2-console`
