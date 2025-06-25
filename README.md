@@ -81,13 +81,14 @@ This service provides REST API endpoints for user registration and authenticatio
     ```json
     {
         "accessToken": "jwt_access_token_here",
-        "expiresIn": 900
+        "expiresIn": 900000
     }
     ```
 -   **Notes:**
     - The `refreshToken` is **not** included in the JSON response body.
     - The `refreshToken` is sent as an `HttpOnly` cookie in the `Set-Cookie` response header.
     - The client should store the `accessToken` from the response body and rely on the browser to manage the `refreshToken` cookie.
+    - Expiration time for the access token is set to 15 minutes (900,000 milliseconds).
 
 #### Refresh Token
 
@@ -98,7 +99,7 @@ This service provides REST API endpoints for user registration and authenticatio
     ```json
     {
         "accessToken": "new_jwt_access_token_here",
-        "expiresIn": 900
+        "expiresIn": 900000
     }
     ```
 -   **Notes:**
