@@ -1,9 +1,8 @@
 package com.growtivat.auth_service.service;
 
 import com.growtivat.auth_service.dto.AuthenticateUserRequestDto;
-import com.growtivat.auth_service.dto.RegisterUserRequestDto;
+import com.growtivat.auth_service.dto.NewUserRequestDto;
 import com.growtivat.auth_service.dto.AuthenticateUserResponseDto;
-import com.growtivat.auth_service.dto.RefreshTokenRequestDto;
 import com.growtivat.auth_service.dto.RefreshTokenResponseDto;
 import com.growtivat.auth_service.model.RefreshToken;
 import com.growtivat.auth_service.model.User;
@@ -11,9 +10,13 @@ import com.growtivat.auth_service.repository.UserRepository;
 import com.growtivat.auth_service.utils.JwtUtils;
 import com.growtivat.auth_service.utils.TokenType;
 
+import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -46,14 +49,14 @@ public class AuthService {
     @Value("${refresh.token.ttl}")
     private Long refreshTokenTTL;
 
-    public ResponseEntity<Void> register(RegisterUserRequestDto registerUserRequestDto) {
+    public ResponseEntity<Void> register(NewUserRequestDto newUserRequestDto) {
         User user = User
                 .builder()
-                .username(registerUserRequestDto.getUsername())
-                .email(registerUserRequestDto.getEmail())
-                .password(bCryptPasswordEncoder.encode(registerUserRequestDto.getPassword()))
-                .firstname(registerUserRequestDto.getFirstname())
-                .lastname(registerUserRequestDto.getLastname())
+                .username(newUserRequestDto.getUsername())
+                .email(newUserRequestDto.getEmail())
+                .password(bCryptPasswordEncoder.encode(newUserRequestDto.getPassword()))
+                .firstname(newUserRequestDto.getFirstname())
+                .lastname(newUserRequestDto.getLastname())
                 .build();
         userRepository.save(user);
 
@@ -74,44 +77,64 @@ public class AuthService {
         String accessToken = jwtUtils.generateToken(authenticateUserRequestDto.getUsername(), TokenType.ACCESS);
         String refreshToken = jwtUtils.generateToken(authenticateUserRequestDto.getUsername(), TokenType.REFRESH);
 
+        RefreshToken refreshTokenOjb = RefreshToken.builder()
+            .token(refreshToken)
+            .username(authenticateUserRequestDto.getUsername())
+            .build();
+        refreshTokenService.save(refreshTokenOjb);
+
         AuthenticateUserResponseDto response = AuthenticateUserResponseDto
                 .builder()
                 .accessToken(accessToken)
-                .refreshToken(refreshToken)
-                .expiresIn(accessTokenTTL)
                 .build();
+
+        ResponseCookie refreshTokenCookie = ResponseCookie.from("refreshToken", refreshToken)
+                .httpOnly(true)
+                .secure(true)
+                .path("/")
+                .maxAge(refreshTokenTTL)
+                .sameSite("Strict")
+                .build();
+
 
         return ResponseEntity
                 .status(HttpStatus.ACCEPTED)
+                .header(HttpHeaders.SET_COOKIE, refreshTokenCookie.toString())
                 .body(response);
-
     }
 
-    public ResponseEntity<RefreshTokenResponseDto> refreshToken(RefreshTokenRequestDto refreshTokenRequestDto) {
+    public ResponseEntity<RefreshTokenResponseDto> createNewAccessTokenFrom(String refreshToken) {
+        if (refreshToken == null || refreshToken.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        // Check if the refresh token is valid
         Optional<RefreshToken> refreshTokenOpt = refreshTokenService
-                .findByToken(refreshTokenRequestDto.getRefreshToken());
+                .findByToken(refreshToken);
 
-        if (refreshTokenOpt.isEmpty() || isRefreshTokenInvalid(refreshTokenOpt)) {
+        if (refreshTokenOpt.isEmpty() || isRefreshTokenInvalid(refreshTokenOpt.get())) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
         // If the refresh token is valid, generate a new access token
         String username = jwtUtils.extractUsername(refreshTokenOpt.get().getToken(), TokenType.REFRESH);
-        String newAccessToken = jwtUtils.generateToken(username, TokenType.REFRESH);
+        String newAccessToken = jwtUtils.generateToken(username, TokenType.ACCESS);
 
         RefreshTokenResponseDto response = RefreshTokenResponseDto.builder()
                 .accessToken(newAccessToken)
-                .expiresIn(refreshTokenTTL)
+                .expiresIn(accessTokenTTL)
                 .build();
         return ResponseEntity.ok(response);
     }
 
-    public ResponseEntity<Void> logout(String username) {
-        refreshTokenService.deleteByUsername(username);
+    public ResponseEntity<Void> logout(String refreshToken) {
+        if (refreshToken != null && !refreshToken.isEmpty()) {
+            System.out.println(refreshToken);
+            refreshTokenService.deleteByToken(refreshToken);
+        }
         return ResponseEntity.ok().build();
     }
 
-    private boolean isRefreshTokenInvalid(Optional<RefreshToken> refreshTokenOpt) {
-        String refreshToken = refreshTokenOpt.get().getToken();
+    private boolean isRefreshTokenInvalid(RefreshToken refreshTokenOpt) {
+        String refreshToken = refreshTokenOpt.getToken();
         String username = jwtUtils.extractUsername(refreshToken, TokenType.REFRESH);
         UserDetails userDetails = userDetailsService.loadUserByUsername(username);
         return !jwtUtils.isValidToken(refreshToken, userDetails, TokenType.REFRESH);

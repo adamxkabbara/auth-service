@@ -1,11 +1,11 @@
 package com.growtivat.auth_service.controller;
 
 import com.growtivat.auth_service.dto.AuthenticateUserRequestDto;
-import com.growtivat.auth_service.dto.RegisterUserRequestDto;
+import com.growtivat.auth_service.dto.NewUserRequestDto;
 import com.growtivat.auth_service.dto.AuthenticateUserResponseDto;
-import com.growtivat.auth_service.dto.RefreshTokenRequestDto;
 import com.growtivat.auth_service.dto.RefreshTokenResponseDto;
 import com.growtivat.auth_service.service.AuthService;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -15,12 +15,16 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/api/auth")
 class AuthController {
 
-    @Autowired
     AuthService authService;
 
+    @Autowired
+    public AuthController(AuthService authService) {
+        this.authService = authService;
+    }
+
     @PostMapping("/register")
-    public ResponseEntity<Void> register(@RequestBody @Valid RegisterUserRequestDto registerUserRequestDto) {
-        return authService.register(registerUserRequestDto);
+    public ResponseEntity<Void> register(@RequestBody @Valid NewUserRequestDto newUserRequestDto) {
+        return authService.register(newUserRequestDto);
     }
 
     @PostMapping("/authenticate")
@@ -29,8 +33,13 @@ class AuthController {
         return authService.authenticate(authenticateUserRequestDto);
     }
 
-    @PostMapping("/refresh")
-    public ResponseEntity<RefreshTokenResponseDto> refresh(@RequestBody RefreshTokenRequestDto refreshTokenRequestDto) {
-        return authService.refreshToken(refreshTokenRequestDto);
+    @GetMapping("/refresh")
+    public ResponseEntity<RefreshTokenResponseDto> refresh(@CookieValue(value = "refreshToken") String refreshToken) {
+        return authService.createNewAccessTokenFrom(refreshToken);
+    }
+
+    @PostMapping("/logout")
+    public ResponseEntity<Void> logout(@CookieValue(value = "refreshToken", required = false) String refreshToken) {
+        return authService.logout(refreshToken);
     }
 }

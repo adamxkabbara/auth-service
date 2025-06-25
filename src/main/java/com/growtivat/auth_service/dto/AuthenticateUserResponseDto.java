@@ -7,6 +7,4 @@ import lombok.Data;
 @Builder
 public class AuthenticateUserResponseDto {
     private String accessToken;
-    private String refreshToken;
-    private Long expiresIn;
 }

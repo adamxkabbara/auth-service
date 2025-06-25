@@ -7,6 +7,5 @@ import lombok.Data;
 @Builder
 public class RefreshTokenResponseDto {
     private String accessToken;
-    private String refreshToken;
     private Long expiresIn;
 }

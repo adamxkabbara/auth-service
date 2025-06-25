@@ -16,9 +16,13 @@ import java.util.UUID;
 @Builder
 public class RefreshToken {
     @Id
-    @Column(nullable = false, unique = true)
+    @Column(nullable = false, unique = true, length = 512)
     private String token;
 
     @Column(nullable = false)
     private String username;
+
+    @GeneratedValue(strategy = GenerationType.UUID)
+    @Column(nullable = false)
+    private UUID deviceId;
 }
