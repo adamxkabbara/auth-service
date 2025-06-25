@@ -23,6 +23,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.Optional;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -77,12 +78,14 @@ public class AuthService {
         RefreshToken refreshTokenOjb = RefreshToken.builder()
             .token(refreshToken)
             .username(authenticateUserRequestDto.getUsername())
+            .deviceId(UUID.randomUUID())
             .build();
         refreshTokenService.save(refreshTokenOjb);
 
         AuthenticateUserResponseDto response = AuthenticateUserResponseDto
                 .builder()
                 .accessToken(accessToken)
+                .expiresIn(accessTokenTTL)
                 .build();
 
         ResponseCookie refreshTokenCookie = ResponseCookie.from("refreshToken", refreshToken)

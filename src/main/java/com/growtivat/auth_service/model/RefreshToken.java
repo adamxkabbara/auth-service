@@ -6,7 +6,6 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.time.Instant;
 import java.util.UUID;
 
 @Entity
@@ -22,7 +21,6 @@ public class RefreshToken {
     @Column(nullable = false)
     private String username;
 
-    @GeneratedValue(strategy = GenerationType.UUID)
     @Column(nullable = false)
     private UUID deviceId;
 }
