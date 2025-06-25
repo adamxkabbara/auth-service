@@ -32,7 +32,7 @@ class AuthController {
     }
 
     @GetMapping("/refresh")
-    public ResponseEntity<RefreshTokenResponseDto> refresh(@CookieValue(value = "refreshToken") String refreshToken) {
+    public ResponseEntity<AuthenticateUserResponseDto> refresh(@CookieValue(value = "refreshToken") String refreshToken) {
         return authService.createNewAccessTokenFrom(refreshToken);
     }
 
